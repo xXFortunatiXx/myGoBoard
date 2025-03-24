@@ -301,4 +301,8 @@ public class GoBoardGame {
 //for compile javac -d bin src/GoBoardGame.java
 //for run java -cp bin GoBoardGame
 
-//for comit 
+/*
+git add src/GoBoardGame.java
+git commit -m "v0.9 - Compiled and structured skeleton complete; prepared directories (src/bin) for next development phase"
+git push
+ */
