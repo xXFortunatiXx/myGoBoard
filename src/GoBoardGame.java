@@ -1,6 +1,6 @@
 /*
  * Thomas Fortunati
- * 3/11/2025
+ * 3/25/2025
  */
 
 import java.util.Scanner;
@@ -9,23 +9,22 @@ public class GoBoardGame {
     private static final int boardSize = 9;
     private static char[][] gameBoard = new char[boardSize][boardSize];
     private static int playerPassCount = 0;
-    
+    private static int playerOneScore = 0;
+    private static int playerTwoScore = 7;
+
     public static void main(String[] args) {
         Scanner userInput = new Scanner(System.in);
-        resetOrInitializeBoard(); // Initialize or reset the game board
+        resetOrInitializeBoard();
         gameLoop(userInput, 1);
         userInput.close();
-        System.out.println("Game Over! Thanks for playing.");
     }
 
-    //working
     private static void gameLoop(Scanner userInput, int currentPlayer) {
         screenSpaceClear();
         displayIntro();
         printBoard();
 
         while (true) {
-            checkBoardForCaptures(determinePlayer(currentPlayer));
             System.out.println("Player " + (currentPlayer == 1 ? "X" : "O") + ", enter your move (x y) or -1 to pass: ");
             Integer moveX = getValidIntegerInput(userInput);
             if (moveX == null) continue;
@@ -35,7 +34,8 @@ public class GoBoardGame {
                 System.out.println("Player " + (currentPlayer == 1 ? "X" : "O") + " has passed.");
 
                 if (playerPassCount == 2) {
-                    System.out.println("Both players have passed. Game over!");
+                    boolean gameEnd = true;
+                    checkForWin(gameEnd);
                     break;
                 }
                 currentPlayer = (currentPlayer == 1) ? 2 : 1;
@@ -50,34 +50,103 @@ public class GoBoardGame {
 
             if (validateMove(moveX, moveY, currentPlayer)) {
                 applyMove(moveX, moveY, currentPlayer);
+                
+                handleCaptures(moveX, moveY, currentPlayer);
+                
                 playerPassCount = 0;
                 currentPlayer = (currentPlayer == 1) ? 2 : 1;
                 screenSpaceClear();
                 displayIntro();
-                printBoard();
 
+                printBoard();
+                displayScore();
+                
+                
             }
         }
     }
 
-    //working
+    private static void handleCaptures(int x, int y, int currentPlayer) {
+        //check for enemy
+        char opponent = (currentPlayer == 1) ? 'O' : 'X';
+        //check all 4 directions
+        int[][] directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+
+        for (int[] dir : directions) {
+            int nx = x + dir[0];
+            int ny = y + dir[1];
+
+            if (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize && gameBoard[ny][nx] == opponent) {
+
+                boolean[][] visited = new boolean[boardSize][boardSize];
+                if (!canBreathe(nx, ny, opponent, visited)) {
+
+                    //debug check
+                    System.out.println("Attempting to remove at: " + nx + "," + ny);
+                    System.out.println("Board value there: " + gameBoard[ny][nx] + " | Expected: " + opponent);
+                    //removeGroup & checkForScore need own array because canBreath alters visited
+                    boolean[][] removalVisited = new boolean[boardSize][boardSize];
+                    removeGroup(nx, ny, opponent, removalVisited);
+                    checkForScore(nx, ny, opponent, removalVisited);
+                    
+                    
+                }
+            }
+        }
+    }
+
+    private static void removeGroup(int x, int y, char playerChar, boolean[][] visited) {
+        if (x < 0 || x >= boardSize || y < 0 || y >= boardSize) return;
+        if (visited[y][x]) return;
+        if (gameBoard[y][x] != playerChar) return;
+        
+
+        visited[y][x] = true;
+        
+        gameBoard[y][x] = '+';
+        System.out.println("Removing: " + x + "," + y);
+    
+        removeGroup(x + 1, y, playerChar, visited);
+        removeGroup(x - 1, y, playerChar, visited);
+        removeGroup(x, y + 1, playerChar, visited);
+        removeGroup(x, y - 1, playerChar, visited);
+    }
+    
+
+    private static boolean canBreathe(int x, int y, char playerChar, boolean[][] visited) {
+        if (x < 0 || x >= boardSize || y < 0 || y >= boardSize) return false;
+        if (visited[y][x]) return false;
+
+        visited[y][x] = true;
+
+        if (gameBoard[y][x] == '+') return true;
+        if (gameBoard[y][x] != playerChar) return false;
+        
+        return
+            canBreathe(x + 1, y, playerChar, visited) ||
+            canBreathe(x - 1, y, playerChar, visited) ||
+            canBreathe(x, y + 1, playerChar, visited) ||
+            canBreathe(x, y - 1, playerChar, visited);
+
+    }
+
     private static Integer getValidIntegerInput(Scanner input) {
+        
         if (!input.hasNextInt()) {
             System.out.println("Invalid input! Please enter an integer.");
-            input.next(); 
+            input.next();
             return null;
         }
         return input.nextInt();
     }
 
-    //formatting working
     private static void screenSpaceClear() {
+
         for (int i = 0; i < 20; i++) {
             System.out.println();
         }
     }
 
-    //working
     private static void displayIntro() {
         System.out.println(
             "==================================================================\n" +
@@ -87,13 +156,13 @@ public class GoBoardGame {
             "         The player with the most pieces on the board wins!       \n" +
             "                       =To pass, enter -1 for x                   \n" +
             "         If both players pass consecutively, the game ends!       \n" +
-            "------------------------------ v0.9 DEBUG ------------------------\n" +
+            "------------------------------ v0.14 DEBUG ------------------------\n" +
             "==================================================================\n"
         );
     }
 
-    //working
     private static void resetOrInitializeBoard() {
+
         for (int row = 0; row < boardSize; row++) {
             for (int col = 0; col < boardSize; col++) {
                 gameBoard[row][col] = '+';
@@ -101,8 +170,8 @@ public class GoBoardGame {
         }
     }
 
-    //working board formatting and updating
     private static void printBoard() {
+
         System.out.print("   ");
         for (int col = 0; col < boardSize; col++) {
             System.out.printf("%2d ", col + 1);
@@ -118,12 +187,11 @@ public class GoBoardGame {
         }
     }
 
-    //working
     private static char determinePlayer(int currentPlayer) {
+
         return (currentPlayer == 1) ? 'X' : 'O';
     }
 
-    //working
     private static boolean validateMove(int x, int y, int currentPlayer) {
 
         if ((x < 0 || x >= boardSize) || (y < 0 || y >= boardSize)) {
@@ -135,13 +203,13 @@ public class GoBoardGame {
             System.out.println("Invalid move! That spot is already taken.");
             return false;
         }
-        //liberty check maybe make separate method
+
         boolean hasLiberty = false;
         char playerChar = determinePlayer(currentPlayer);
 
-        if (x > 0             && (gameBoard[y][x - 1] == '+' || gameBoard[y][x - 1] == playerChar)) hasLiberty = true;
+        if (x > 0 && (gameBoard[y][x - 1] == '+' || gameBoard[y][x - 1] == playerChar)) hasLiberty = true;
         if (x < boardSize - 1 && (gameBoard[y][x + 1] == '+' || gameBoard[y][x + 1] == playerChar)) hasLiberty = true;
-        if (y > 0             && (gameBoard[y - 1][x] == '+' || gameBoard[y - 1][x] == playerChar)) hasLiberty = true;
+        if (y > 0 && (gameBoard[y - 1][x] == '+' || gameBoard[y - 1][x] == playerChar)) hasLiberty = true;
         if (y < boardSize - 1 && (gameBoard[y + 1][x] == '+' || gameBoard[y + 1][x] == playerChar)) hasLiberty = true;
 
         if (!hasLiberty) {
@@ -151,158 +219,66 @@ public class GoBoardGame {
 
         return true;
     }
-    
-    //working
+
     private static void applyMove(int x, int y, int currentPlayer) {
+
         gameBoard[y][x] = determinePlayer(currentPlayer);
     }
 
-    //in progress
-    private static void checkBoardForCaptures(char currentPlayer) {
-        
-        // Placeholder for capture logic
-        //we want a 2D array to keep track of the board from top to bottom for analysis, this way we can at least determine the probability of a player winning
-        //we can also use this to determine if a player has won as it will know how many pieces are on the board
-        // for an
-        System.out.println("Checking for captures...");
+    private static void displayScore() {
+        System.out.println("Current Score: ");
+        System.out.println("Player 1 Score: " + playerOneScore);
+        System.out.println("Player 2 Score: " + playerTwoScore);
     }
 
-    //in progress
-    private static boolean canBreathe(int x, int y, char playerChar, boolean[][] visited) {
-            //i think i need something like if false, remove pieces
-            if (x < 0 || x >= boardSize || y < 0 || y >= boardSize) return false;
-        
-        
-        
-            visited[y][x] = true; 
-        
-            if (gameBoard[y][x] == '+') return true;
-        
-            if (gameBoard[y][x] != playerChar) return false;
-        
-            return canBreathe(x + 1, y, playerChar, visited) ||
-                canBreathe(x - 1, y, playerChar, visited) ||
-                canBreathe(x, y + 1, playerChar, visited) ||
-                canBreathe(x, y - 1, playerChar, visited);
-    }
+    private static void checkForScore(int x, int y, char opponent, boolean[][] visited) {
+        System.out.println("Captured a group!");
+        int capturedPieces = 0;
 
-    //in progress
-    private static boolean captureGroup(int x, int y, char piece, boolean[][] visited) {
-        if (x < 0 || x >= boardSize || y < 0 || y >= boardSize || visited[y][x]) return false;
-
-        visited[y][x] = true;
-
-        if (gameBoard[y][x] == '+') return false;
-        if (gameBoard[y][x] != piece) return true;
-
-        boolean captured = true;
-        captured &= captureGroup(x + 1, y, piece, visited);
-        captured &= captureGroup(x - 1, y, piece, visited);
-        captured &= captureGroup(x, y + 1, piece, visited);
-        captured &= captureGroup(x, y - 1, piece, visited);
-
-        if (captured) gameBoard[y][x] = '+';
-        return captured;
-    }
-
-
-    //in progress
-    private static void removePieces() {
-        boolean[][] visited = new boolean[boardSize][boardSize];
-        if (captureGroup(0, 0, determinePlayer(1), visited)) {
-            System.out.println("Group captured!");
-        }
-        // Placeholder for piece removal logic
-    }
-
-    //in progress
-    private static void checkForWin() {
-        // Placeholder for win condition logic
-        //1.win conditions 
-        //player has most combined points from capturing pieces and having territory
-        //player two starts with 7 points to make up for going second
-
-        //if both players pass consecutively, the game ends
-        // --> if yes, count pieces
-
-        //count pieces on board for each player
-        //--> player x total pieces
-        //--> player o total pieces
-
-        //determine winner
-        //--> if player x > player o, player x wins
-        //--> if player o > player x, player o wins
-        //--> if player x == player o, tie game
-
-        //print winner
-        //winner anouncement 
-        //final board state
-        //piece count summary for each player
-        //probability of winning for each player
-
-    }
-    //in progress
-    private static void probabilityOfWin(boolean[][] visited) {
-        // Placeholder for probability of win logic
-        /*an iterative loop to scan a 2D array from top to botton
-         * row & col
-         * the loop will scan the board and use recursion to determine the probability of a player winning
-         * the recursion will check connected pieces of a players pieces and determine theyre captured territory
-         * the recursion could further split into groups for probability of winning
-         * so we have one score on board for each player 
-         * 1. check for connected pieces
-         * 2.calcualte the probability of winning based on conncted pieces and liberties
-         * 3. example: if a player has 3 connected pieces and 2 liberties, the probability of winning is 66%
-         * 4. so we take the combined prob of each players territory and output the current probability of winning
-         * 5. we can also use this to determnine the possible number of moves for each player to win
-         * player A: 
-         * 2 oppenent groups can be capture in 1 move
-         * 1 group could be saved with 1 move
-         * 
-         * player B:
-         * 1 group in atari
-         * 0 imediate caputers
-         * 
-         * 
-         * 
-         * maybe for game it prints out like 
-         * player A: 66% chance of winning
-         * -2 groups: safe
-         * -1 group: Warning
-         * -1 group: Critical
-         * player B: 33% chance of winning
-         * -3 group: Warning
-         * -2 groups: safe
-         * 
-         * critical: total possible lib 4 and current lib 1 = 75 - 100
-         * warning: total possible lib 4 and current lib 2 = 50
-         * safe: total possible lib 4 and current lib 4 = 0
-         *  
-         * visited method neeeded. once a group has been scanned it will be marked as visited and skipped in the future, this way we can avoid infinite loops so the whole board scanned is our base case
-         * 
-         */
-    }
-
-    //in progress
-    private static void printVisited(boolean[][] visited) {
-        System.out.println("Visited Map:");
         for (int row = 0; row < boardSize; row++) {
             for (int col = 0; col < boardSize; col++) {
-                System.out.print(visited[row][col] ? "1 " : ". ");
+                if (visited[row][col]) {
+                    capturedPieces++;
+                }
             }
-            System.out.println();
         }
+
+        if (opponent == 'X') {
+            playerTwoScore += capturedPieces;
+            playerOneScore -= capturedPieces;
+        } else {
+            playerOneScore += capturedPieces;
+            playerTwoScore -= capturedPieces;
+        }
+        if (playerOneScore < 0) playerOneScore = 0;
+        if (playerTwoScore < 0) playerTwoScore = 0;
+
     }
-    
 
-    
+    private static boolean checkForWin(boolean gameEnd) {
+        if (gameEnd == true) {
+            System.out.println("Game Over! Thanks for playing.");
+            //winner is determined by score
+            if (playerOneScore > playerTwoScore) {
+                System.out.println("Player 1 wins!");
+            } else if (playerTwoScore > playerOneScore) {
+                System.out.println("Player 2 wins!");
+            } else {
+                System.out.println("It's a tie!");
+            }
+            return true; // Game has ended
+        }
+        System.out.println("Checking for win...");
+        // Placeholder for win logic
+        return false; // Game has not ended
+    }
+
 }
+// Compile: javac -d bin src/GoBoardGame.java
+// Run:     java -cp bin GoBoardGame
 
-//for compile javac -d bin src/GoBoardGame.java
-//for run java -cp bin GoBoardGame
-
-/*
-git add src/GoBoardGame.java
-git commit -m "v0.9 - Compiled and structured skeleton complete; prepared directories (src/bin) for next development phase"
-git push
- */
+/* Git workflow:
+git add .
+git commit -m "v0.x - brief description of your changes"
+git push origin main
+*/
