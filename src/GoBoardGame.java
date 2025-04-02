@@ -27,7 +27,7 @@ public class GoBoardGame {
         while (true) {
             System.out.println("Player " + (currentPlayer == 1 ? "X" : "O") + ", enter your move (x y) or -1 to pass: ");
             Integer moveX = getValidIntegerInput(userInput);
-            if (moveX == null) continue;
+            if (moveX == null) continue; 
 
             if (moveX == -1) {
                 playerPassCount++;
@@ -50,6 +50,12 @@ public class GoBoardGame {
 
             if (validateMove(moveX, moveY, currentPlayer)) {
                 applyMove(moveX, moveY, currentPlayer);
+                //increase player score
+                if (currentPlayer == 1) {
+                    playerOneScore++;
+                } else {
+                    playerTwoScore++;
+                }
                 
                 handleCaptures(moveX, moveY, currentPlayer);
                 
@@ -148,17 +154,20 @@ public class GoBoardGame {
     }
 
     private static void displayIntro() {
-        System.out.println(
-            "==================================================================\n" +
-            "                    Welcome to the Go Board Game!                 \n" +
-            "                     Player 1: X    Player 2: O                   \n" +
-            "       To make a move, enter the x and y coordinates (1-9).       \n" +
-            "         The player with the most pieces on the board wins!       \n" +
-            "                       =To pass, enter -1 for x                   \n" +
-            "         If both players pass consecutively, the game ends!       \n" +
-            "------------------------------ v0.14 DEBUG ------------------------\n" +
-            "==================================================================\n"
-        );
+        String intro = """
+                ==================================================================
+                                    Welcome to the Go Board Game!                 
+                                     Player 1: X    Player 2: O                   
+                ==================================================================
+                                     Score:    %d--------------%d
+                       To make a move, enter the x and y coordinates (1-9).       
+                         The player with the most pieces on the board wins!       
+                                   =To pass, enter -1 for x                       
+                       If both players pass consecutively, the game ends!         
+                ------------------------------ v0.15 DEBUG -----------------------
+                ==================================================================
+                """.formatted(playerOneScore, playerTwoScore);
+                System.out.println(intro);
     }
 
     private static void resetOrInitializeBoard() {
